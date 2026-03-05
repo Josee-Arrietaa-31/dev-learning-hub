@@ -1,6 +1,14 @@
 import { CommunityRequestState } from '../constants/enums';
 import { CommunityRequest } from '../database/models';
 
+const serializeDoc = (doc: any) => {
+  if (!doc) return null;
+  return {
+    ...doc,
+    _id: doc._id.toString(),
+  };
+};
+
 export const bulkInsertCommunityRequestDal = async (
   communityRequests: any,
 ) => CommunityRequest.insertMany(communityRequests);
@@ -21,8 +29,9 @@ export const getCommunityRequestsWithPaginationDal = async (
   const communityRequests = await CommunityRequest.find({
     state: CommunityRequestState.WAITING_REVIEW,
   }).skip(offset)
-    .limit(pageSize);
-  return communityRequests;
+    .limit(pageSize)
+    .lean();
+  return communityRequests.map(serializeDoc);
 };
 
 export const createCommunityRequestDal = async (
@@ -31,21 +40,30 @@ export const createCommunityRequestDal = async (
 
 export const getCommunityRequestByIdDal = async (
   communityRequestId: string,
-) => CommunityRequest.findById(communityRequestId);
+) => {
+  const doc = await CommunityRequest.findById(communityRequestId).lean();
+  return serializeDoc(doc);
+};
 
 export const approveCommunityRequestDal = async (
   communityRequestId: any,
   userEmail: string,
-) => CommunityRequest.findOneAndUpdate(
-  { _id: communityRequestId },
-  { $addToSet: { approves: userEmail } },
-  { returnOriginal: false },
-);
+) => {
+  const doc = await CommunityRequest.findOneAndUpdate(
+    { _id: communityRequestId },
+    { $addToSet: { approves: userEmail } },
+    { returnOriginal: false },
+  ).lean();
+  return serializeDoc(doc);
+};
 
 export const mergeCommunityRequestDal = async (
   communityRequestId: any,
-) => CommunityRequest.findOneAndUpdate(
-  { _id: communityRequestId },
-  { state: CommunityRequestState.MERGED },
-  { returnOriginal: false },
-);
+) => {
+  const doc = await CommunityRequest.findOneAndUpdate(
+    { _id: communityRequestId },
+    { state: CommunityRequestState.MERGED },
+    { returnOriginal: false },
+  ).lean();
+  return serializeDoc(doc);
+};
